@@ -2,7 +2,7 @@
 # Pneumonia Detection App
 
 A Flutter mobile application that uses deep learning to detect
-pneumonia from chest X-ray images. Built as a bachelor's project.
+pneumonia from chest X-ray images. 
 
 ## Project Structure
 - `flutter-app` branch — Flutter mobile application (Dart)
