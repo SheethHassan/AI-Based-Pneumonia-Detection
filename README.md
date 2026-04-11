@@ -1,6 +1,18 @@
-Issues faced while programming this app:
 
-1. The val split from the dataset is very small (only 16 images) which can cause overfitting
-   solution:
-   a.split the training set to 80/20 so that the ai model can get a reliable practice.
-   b.Augmentation(rotation, zoom, horizontal flip) to increase dataset robustness. 
+# Pneumonia Detection App
+
+A Flutter mobile application that uses deep learning to detect
+pneumonia from chest X-ray images. Built as a bachelor's project.
+
+## Project Structure
+- `flutter-app` branch — Flutter mobile application (Dart)
+- `ml-model` branch — Machine learning model training (Python/Colab)
+
+## Tech Stack
+- Flutter + Firebase (frontend + auth)
+- TensorFlow / Keras + MobileNetV2 (model training)
+- TensorFlow Lite (on-device inference)
+
+## Dataset
+Kaggle Chest X-Ray Images (Pneumonia)
+https://www.kaggle.com/datasets/paultimothymooney/chest-xray-pneumonia
