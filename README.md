@@ -5,8 +5,8 @@ A Flutter mobile application that uses deep learning to detect
 pneumonia from chest X-ray images. 
 
 ## Project Structure
-- `flutter-app` branch — Flutter mobile application (Dart)
-- `ml-model` branch — Machine learning model training (Python/Colab)
+- `FLUTTER_FRONTED` branch — Flutter mobile application (Dart)
+- `ML-MODEL` branch — Machine learning model training (Python/Colab)
 
 ## Tech Stack
 - Flutter + Firebase (frontend + auth)
