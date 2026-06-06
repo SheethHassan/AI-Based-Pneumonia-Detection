@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1081285997349",
+    "project_id": "pneumoscanai-256f5",
+    "storage_bucket": "pneumoscanai-256f5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1081285997349:android:ac7483bf2da916bc1420cc",
+        "android_client_info": {
+          "package_name": "com.example.pneumonia_detection"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA64d1h11UORkqBnwhl_CjonR3-vEfveKg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
