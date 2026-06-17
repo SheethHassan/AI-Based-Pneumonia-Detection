@@ -12,6 +12,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../services/classifier_service.dart';
 import '../services/image_service.dart';
+import '../services/image_validation.dart';
 import '../services/auth_service.dart';
 import '../widgets/custom_drawer.dart';
 import 'result_screen.dart';
@@ -34,7 +35,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen>
     with TickerProviderStateMixin {
-  final ClassifierService _classifier = ClassifierService();
+  final ClassifierService _classifier = ClassifierService.instance;
   final ImageService _imageService = ImageService();
 
   bool _isModelLoading = true;
@@ -90,29 +91,29 @@ class _HomeScreenState extends State<HomeScreen>
   void dispose() {
     _pulseController.dispose();
     _fadeController.dispose();
-    _classifier.dispose();
     super.dispose();
   }
 
   // ── Actions ──────────────────────────────────────────────────────────────────
   Future<void> _pickAndAnalyze() async {
-    final image = await _imageService.pickFromGallery();
-    if (image == null) return;
-
-    setState(() {
-      _selectedImage = image;
-      _isAnalyzing = true;
-    });
-
     try {
+      final image = await _imageService.pickFromGallery();
+      if (image == null) return;
+
+      setState(() {
+        _selectedImage = image;
+        _isAnalyzing = true;
+      });
+
       final result = await _classifier.classify(image);
-      
+
       // Save result to Firestore for Analytics & History
       await FirebaseFirestore.instance.collection('scans').add({
         'doctorName': widget.doctorName,
         'doctorEmail': widget.doctorEmail,
         'result': result.isPneumonia ? 'Pneumonia' : 'Normal',
         'confidence': result.confidence,
+        'modelVersion': result.modelInfo?.version ?? '1.0.0',
         'timestamp': FieldValue.serverTimestamp(),
       });
 
@@ -126,6 +127,16 @@ class _HomeScreenState extends State<HomeScreen>
             ),
           ),
         );
+      }
+    } on ImagePickerException catch (e) {
+      if (mounted) {
+        setState(() => _isAnalyzing = false);
+        _showError(e.message);
+      }
+    } on ImageValidationException catch (e) {
+      if (mounted) {
+        setState(() => _isAnalyzing = false);
+        _showError(e.message);
       }
     } catch (e) {
       if (mounted) {
@@ -439,8 +450,8 @@ class _HomeScreenState extends State<HomeScreen>
             const SizedBox(height: 12),
             Text(
               _errorMessage.isNotEmpty 
-                  ? 'Error Details: $_errorMessage\n\nEnsure densenet_pneumonia.tflite is in assets/model/ and pubspec.yaml is updated.'
-                  : 'Could not load the AI model. Make sure densenet_pneumonia.tflite exists in assets/model/',
+                  ? 'Error Details: $_errorMessage\n\nEnsure MULTI_OUTPUT_MODEL_flutter.tflite is in assets/model/ and pubspec.yaml is updated.'
+                  : 'Could not load the AI model. Make sure MULTI_OUTPUT_MODEL_flutter.tflite exists in assets/model/',
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
                   fontSize: 14,
@@ -664,7 +675,13 @@ class _HomeScreenState extends State<HomeScreen>
               ),
 
             // Upload / Analyze button
-            SizedBox(
+            Semantics(
+              button: true,
+              label: _isAnalyzing
+                  ? 'Analyzing chest X-ray'
+                  : 'Upload and analyze chest X-ray',
+              enabled: !_isAnalyzing,
+              child: SizedBox(
               width: double.infinity,
               height: 54,
               child: ElevatedButton.icon(
@@ -693,6 +710,7 @@ class _HomeScreenState extends State<HomeScreen>
                   elevation: 0,
                 ),
               ),
+            ),
             ),
           ],
         ),

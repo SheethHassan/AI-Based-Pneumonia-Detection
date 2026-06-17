@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import '../main.dart';
 import '../screens/admin/admin_dashboard.dart';
+import '../screens/scan_history_screen.dart';
 
 class CustomDrawer extends StatelessWidget {
   final String doctorName;
@@ -39,8 +40,15 @@ class CustomDrawer extends StatelessWidget {
                   icon: Icons.history_rounded,
                   label: 'Scan History',
                   onTap: () {
-                    // TODO: Implement History
                     Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ScanHistoryScreen(
+                          doctorEmail: doctorEmail,
+                        ),
+                      ),
+                    );
                   },
                 ),
                 if (role.toLowerCase() == 'admin') ...[

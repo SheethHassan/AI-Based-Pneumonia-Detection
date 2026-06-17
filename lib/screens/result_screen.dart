@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../models/classification_result.dart';
+import '../services/result_export_service.dart';
 
 class ResultScreen extends StatefulWidget {
   final ClassificationResult result;
@@ -35,6 +36,8 @@ class _ResultScreenState extends State<ResultScreen>
   late AnimationController _slideController;
   late Animation<Offset> _slideAnim;
   bool _showHeatmap = false;
+  bool _isSaving = false;
+  bool _isSharing = false;
 
   @override
   void initState() {
@@ -176,7 +179,10 @@ class _ResultScreenState extends State<ResultScreen>
         child: Column(
           children: [
             // Animated confidence ring
-            AnimatedBuilder(
+            Semantics(
+              label:
+                  'Confidence ${(widget.result.confidence * 100).toStringAsFixed(1)} percent',
+              child: AnimatedBuilder(
               animation: _ringAnim,
               builder: (context, child) {
                 return SizedBox(
@@ -214,10 +220,13 @@ class _ResultScreenState extends State<ResultScreen>
                 );
               },
             ),
+            ),
             const SizedBox(height: 24),
 
             // Classification label
-            Container(
+            Semantics(
+              label: 'Diagnosis result: ${widget.result.label}',
+              child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
               decoration: BoxDecoration(
                 gradient: _resultGradient,
@@ -251,6 +260,7 @@ class _ResultScreenState extends State<ResultScreen>
                   ),
                 ],
               ),
+            ),
             ),
             const SizedBox(height: 12),
             Text(
@@ -291,28 +301,33 @@ class _ResultScreenState extends State<ResultScreen>
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _showHeatmap ? 'Grad-CAM Analysis' : 'Analyzed Image',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : AppTheme.textPrimary,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _showHeatmap ? 'Grad-CAM Analysis' : 'Analyzed Image',
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white : AppTheme.textPrimary,
+                        ),
                       ),
-                    ),
-                    Text(
-                      _showHeatmap ? 'AI FOCUS REGIONS' : 'ORIGINAL X-RAY',
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: (isDark ? AppTheme.primaryDarkBlue : AppTheme.primaryBlue).withAlpha(180),
-                        letterSpacing: 0.5,
+                      Text(
+                        _showHeatmap ? 'AI FOCUS REGIONS' : 'ORIGINAL X-RAY',
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: (isDark ? AppTheme.primaryDarkBlue : AppTheme.primaryBlue).withAlpha(180),
+                          letterSpacing: 0.5,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 if (hasHeatmap)
                   Container(
                     height: 36,
@@ -341,7 +356,12 @@ class _ResultScreenState extends State<ResultScreen>
               ],
             ),
             const SizedBox(height: 12),
-            Stack(
+            Semantics(
+              label: _showHeatmap
+                  ? 'Grad-CAM heatmap showing AI focus regions'
+                  : 'Original chest X-ray image',
+              image: true,
+              child: Stack(
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(14),
@@ -353,14 +373,14 @@ class _ResultScreenState extends State<ResultScreen>
                             key: const ValueKey('heatmap'),
                             width: double.infinity,
                             height: 240,
-                            fit: BoxFit.cover,
+                            fit: BoxFit.fill,
                           )
                         : Image.file(
                             widget.imageFile,
                             key: const ValueKey('original'),
                             width: double.infinity,
                             height: 240,
-                            fit: BoxFit.cover,
+                            fit: BoxFit.fill,
                           ),
                   ),
                 ),
@@ -400,6 +420,7 @@ class _ResultScreenState extends State<ResultScreen>
                     ),
                   ),
               ],
+            ),
             ),
             if (_showHeatmap && hasHeatmap) ...[
               const SizedBox(height: 16),
@@ -494,6 +515,11 @@ class _ResultScreenState extends State<ResultScreen>
             const Divider(height: 20),
             _detailRow(Icons.devices_rounded, 'Processing',
                 'On-device inference'),
+            if (widget.result.modelInfo != null) ...[
+              const Divider(height: 20),
+              _detailRow(Icons.memory_rounded, 'Model',
+                  widget.result.modelInfo!.displayLabel),
+            ],
           ],
         ),
       ),
@@ -569,46 +595,166 @@ class _ResultScreenState extends State<ResultScreen>
     final Color buttonColor = isDark ? AppTheme.primaryDarkBlue : AppTheme.primaryBlue;
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.add_photo_alternate_rounded),
-              label: const Text('New Scan'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: buttonColor.withAlpha(isDark ? 40 : 15),
-                foregroundColor: isDark ? Colors.white : buttonColor,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: isDark ? BorderSide(color: buttonColor.withAlpha(80)) : BorderSide.none,
+          Row(
+            children: [
+              Expanded(
+                child: Semantics(
+                  button: true,
+                  label: 'Start a new scan',
+                  child: ElevatedButton.icon(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.add_photo_alternate_rounded),
+                  label: const Text('New Scan'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: buttonColor.withAlpha(isDark ? 40 : 15),
+                    foregroundColor: isDark ? Colors.white : buttonColor,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: isDark ? BorderSide(color: buttonColor.withAlpha(80)) : BorderSide.none,
+                    ),
+                  ),
+                ),
                 ),
               ),
-            ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Semantics(
+                  button: true,
+                  label: 'Save result to device',
+                  child: ElevatedButton.icon(
+                  onPressed: _isSaving ? null : _saveResult,
+                  icon: _isSaving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.save_alt_rounded),
+                  label: Text(_isSaving ? 'Saving...' : 'Save Result'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: buttonColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
+                  ),
+                ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () {
-                // Implement Save
-              },
-              icon: const Icon(Icons.save_alt_rounded),
-              label: const Text('Save Result'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: buttonColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
-                elevation: 0,
+          const SizedBox(height: 12),
+          Semantics(
+            button: true,
+            label: 'Share PDF analysis report',
+            child: SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: (_isSaving || _isSharing) ? null : _sharePdf,
+                icon: _isSharing
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.picture_as_pdf_rounded),
+                label: Text(_isSharing ? 'Preparing PDF...' : 'Share PDF Report'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: isDark ? Colors.white : buttonColor,
+                  side: BorderSide(color: buttonColor.withAlpha(isDark ? 120 : 80)),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
               ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _saveResult() async {
+    setState(() => _isSaving = true);
+    try {
+      final savedPath = await ResultExportService.saveResult(
+        result: widget.result,
+        imageFile: widget.imageFile,
+        modelInfo: widget.result.modelInfo,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Result saved to device storage'),
+            backgroundColor: AppTheme.successGreen,
+            behavior: SnackBarBehavior.floating,
+            action: SnackBarAction(
+              label: 'OK',
+              textColor: Colors.white,
+              onPressed: () {},
+            ),
+          ),
+        );
+        debugPrint('Saved scan result to: $savedPath');
+      }
+    } on ResultSaveException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.message),
+            backgroundColor: AppTheme.dangerRed,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not save result: $e'),
+            backgroundColor: AppTheme.dangerRed,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _sharePdf() async {
+    setState(() => _isSharing = true);
+    try {
+      await ResultExportService.sharePdfReport(
+        result: widget.result,
+        imageFile: widget.imageFile,
+        modelInfo: widget.result.modelInfo,
+      );
+    } on ResultSaveException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message), backgroundColor: AppTheme.dangerRed),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not share PDF: $e'),
+            backgroundColor: AppTheme.dangerRed,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSharing = false);
+    }
   }
 }
 

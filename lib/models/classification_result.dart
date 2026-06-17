@@ -5,6 +5,7 @@
 // =============================================================================
 
 import 'dart:typed_data';
+import 'model_info.dart';
 
 class ClassificationResult {
   /// "Normal" or "Pneumonia"
@@ -19,11 +20,15 @@ class ClassificationResult {
   /// Optional Grad-CAM heatmap image bytes
   final Uint8List? heatmapImage;
 
+  /// Model used for this prediction
+  final ModelInfo? modelInfo;
+
   const ClassificationResult({
     required this.label,
     required this.confidence,
     required this.inferenceTimeMs,
     this.heatmapImage,
+    this.modelInfo,
   });
 
   /// Whether the prediction indicates pneumonia

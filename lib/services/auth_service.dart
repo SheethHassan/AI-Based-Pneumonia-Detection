@@ -111,6 +111,58 @@ class AuthService {
     }
   }
 
+  /// Resolve a Staff ID or email to the Firebase Auth email address.
+  static Future<String> resolveEmail(String doctorId) async {
+    final trimmed = doctorId.trim();
+    final fullEmail =
+        trimmed.contains('@') ? trimmed : '$trimmed@moh.om';
+
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(fullEmail.toLowerCase())
+        .get();
+
+    if (doc.exists) {
+      final data = doc.data() as Map<String, dynamic>;
+      final email = (data['email'] as String? ?? fullEmail).trim();
+      if (email.isNotEmpty) return email.toLowerCase();
+    }
+
+    // Fallback: use constructed email if account may exist in Auth only
+    return fullEmail.toLowerCase();
+  }
+
+  /// Send a password reset email for the given Staff ID or email.
+  /// Returns the email address the reset was sent to.
+  static Future<String> sendPasswordReset({required String doctorId}) async {
+    final email = await resolveEmail(doctorId);
+
+    // Verify account exists in Firestore before sending (avoid silent failures)
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(email)
+        .get();
+
+    if (!doc.exists) {
+      // Also try lookup by email field
+      final query = await FirebaseFirestore.instance
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .limit(1)
+          .get();
+      if (query.docs.isEmpty) {
+        throw FirebaseAuthException(
+          code: 'user-not-found',
+          message: 'No account found for this Staff ID or email.',
+        );
+      }
+    }
+
+    await _auth.sendPasswordResetEmail(email: email);
+    await _logAction(email, 'Password Reset Requested');
+    return email;
+  }
+
   /// Sign out current user and log the action
   static Future<void> signOut() async {
     final user = _auth.currentUser;

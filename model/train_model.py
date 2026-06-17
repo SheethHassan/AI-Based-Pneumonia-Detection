@@ -68,49 +68,99 @@ def parse_args():
 # ══════════════════════════════════════════════════════════════════════════════
 # 1. DATA LOADING & AUGMENTATION
 # ══════════════════════════════════════════════════════════════════════════════
+def _has_dedicated_val(data_dir: str) -> bool:
+    """Return True when dataset/val/NORMAL and dataset/val/PNEUMONIA exist."""
+    val_dir = os.path.join(data_dir, "val")
+    if not os.path.isdir(val_dir):
+        return False
+    return all(
+        os.path.isdir(os.path.join(val_dir, cls)) for cls in CLASS_NAMES
+    )
+
+
 def load_datasets(data_dir: str, batch_size: int):
-    """Load train / validation / test datasets with augmentation."""
+    """Load train / validation / test datasets with augmentation.
 
-    # DenseNet121 uses ImageNet preprocessing:
-    # Scale to [0, 1], then normalize with mean=[0.485, 0.456, 0.406],
-    # std=[0.229, 0.224, 0.225]
-    train_datagen = keras.preprocessing.image.ImageDataGenerator(
-        preprocessing_function=applications.densenet.preprocess_input,
-        rotation_range=20,
-        width_shift_range=0.1,
-        height_shift_range=0.1,
-        shear_range=0.15,
-        zoom_range=0.2,
-        horizontal_flip=True,
-        brightness_range=[0.8, 1.2],
-        fill_mode="nearest",
-        validation_split=0.20,
-    )
+    Uses the dedicated ``val/`` folder when present; otherwise falls back to
+    a 20% hold-out split from ``train/``.
+    """
+    use_dedicated_val = _has_dedicated_val(data_dir)
 
-    val_datagen = keras.preprocessing.image.ImageDataGenerator(
-        preprocessing_function=applications.densenet.preprocess_input,
-        validation_split=0.20,
-    )
+    if use_dedicated_val:
+        print("  ✓ Using dedicated val/ folder for validation")
+        train_datagen = keras.preprocessing.image.ImageDataGenerator(
+            preprocessing_function=applications.densenet.preprocess_input,
+            rotation_range=20,
+            width_shift_range=0.1,
+            height_shift_range=0.1,
+            shear_range=0.15,
+            zoom_range=0.2,
+            horizontal_flip=True,
+            brightness_range=[0.8, 1.2],
+            fill_mode="nearest",
+        )
 
-    train_gen = train_datagen.flow_from_directory(
-        os.path.join(data_dir, "train"),
-        target_size=(IMG_SIZE, IMG_SIZE),
-        batch_size=batch_size,
-        class_mode="binary",
-        classes=CLASS_NAMES,
-        seed=SEED,
-        subset="training",
-    )
+        val_datagen = keras.preprocessing.image.ImageDataGenerator(
+            preprocessing_function=applications.densenet.preprocess_input,
+        )
 
-    val_gen = val_datagen.flow_from_directory(
-        os.path.join(data_dir, "train"),
-        target_size=(IMG_SIZE, IMG_SIZE),
-        batch_size=batch_size,
-        class_mode="binary",
-        classes=CLASS_NAMES,
-        seed=SEED,
-        subset="validation",
-    )
+        train_gen = train_datagen.flow_from_directory(
+            os.path.join(data_dir, "train"),
+            target_size=(IMG_SIZE, IMG_SIZE),
+            batch_size=batch_size,
+            class_mode="binary",
+            classes=CLASS_NAMES,
+            seed=SEED,
+        )
+
+        val_gen = val_datagen.flow_from_directory(
+            os.path.join(data_dir, "val"),
+            target_size=(IMG_SIZE, IMG_SIZE),
+            batch_size=batch_size,
+            class_mode="binary",
+            classes=CLASS_NAMES,
+            seed=SEED,
+            shuffle=False,
+        )
+    else:
+        print("  ⚠ val/ folder not found — using 20% split from train/")
+        train_datagen = keras.preprocessing.image.ImageDataGenerator(
+            preprocessing_function=applications.densenet.preprocess_input,
+            rotation_range=20,
+            width_shift_range=0.1,
+            height_shift_range=0.1,
+            shear_range=0.15,
+            zoom_range=0.2,
+            horizontal_flip=True,
+            brightness_range=[0.8, 1.2],
+            fill_mode="nearest",
+            validation_split=0.20,
+        )
+
+        val_datagen = keras.preprocessing.image.ImageDataGenerator(
+            preprocessing_function=applications.densenet.preprocess_input,
+            validation_split=0.20,
+        )
+
+        train_gen = train_datagen.flow_from_directory(
+            os.path.join(data_dir, "train"),
+            target_size=(IMG_SIZE, IMG_SIZE),
+            batch_size=batch_size,
+            class_mode="binary",
+            classes=CLASS_NAMES,
+            seed=SEED,
+            subset="training",
+        )
+
+        val_gen = val_datagen.flow_from_directory(
+            os.path.join(data_dir, "train"),
+            target_size=(IMG_SIZE, IMG_SIZE),
+            batch_size=batch_size,
+            class_mode="binary",
+            classes=CLASS_NAMES,
+            seed=SEED,
+            subset="validation",
+        )
 
     test_datagen = keras.preprocessing.image.ImageDataGenerator(
         preprocessing_function=applications.densenet.preprocess_input

@@ -10,6 +10,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -200,7 +201,9 @@ class _LoginScreenState extends State<LoginScreen>
             const SizedBox(height: 28),
 
             // --- Staff ID Field ---
-            TextFormField(
+            Semantics(
+              label: 'Staff ID',
+              child: TextFormField(
               controller: _idController,
               keyboardType: TextInputType.text,
               textInputAction: TextInputAction.next,
@@ -218,10 +221,13 @@ class _LoginScreenState extends State<LoginScreen>
                 return null;
               },
             ),
+            ),
             const SizedBox(height: 18),
 
             // --- Password Field ---
-            TextFormField(
+            Semantics(
+              label: 'Password',
+              child: TextFormField(
               controller: _passwordController,
               obscureText: _obscurePassword,
               textInputAction: TextInputAction.done,
@@ -230,15 +236,21 @@ class _LoginScreenState extends State<LoginScreen>
                 hintText: 'Password',
                 prefixIcon: const Icon(Icons.lock_outline_rounded),
                 prefixIconColor: AppTheme.primaryBlue,
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _obscurePassword
-                        ? Icons.visibility_off_outlined
-                        : Icons.visibility_outlined,
-                    color: AppTheme.textLight,
+                suffixIcon: Semantics(
+                  button: true,
+                  label: _obscurePassword
+                      ? 'Show password'
+                      : 'Hide password',
+                  child: IconButton(
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      color: AppTheme.textLight,
+                    ),
+                    onPressed: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
                   ),
-                  onPressed: () =>
-                      setState(() => _obscurePassword = !_obscurePassword),
                 ),
               ),
               validator: (value) {
@@ -251,11 +263,42 @@ class _LoginScreenState extends State<LoginScreen>
                 return null;
               },
             ),
-            const SizedBox(height: 14),
+            ),
+            const SizedBox(height: 8),
+
+            Align(
+              alignment: Alignment.centerRight,
+              child: Semantics(
+                button: true,
+                label: 'Forgot password',
+                child: TextButton(
+                  onPressed: _isLoading
+                      ? null
+                      : () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const ForgotPasswordScreen(),
+                            ),
+                          );
+                        },
+                  child: Text(
+                    'Forgot password?',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.primaryBlue,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
 
             // --- Error Message ---
             if (_errorMessage != null) ...[
-              Container(
+              Semantics(
+                liveRegion: true,
+                child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: AppTheme.dangerRed.withAlpha(20),
@@ -278,11 +321,15 @@ class _LoginScreenState extends State<LoginScreen>
                   ],
                 ),
               ),
+              ),
               const SizedBox(height: 14),
             ],
 
             // --- Login Button ---
-            SizedBox(
+            Semantics(
+              button: true,
+              label: 'Sign in',
+              child: SizedBox(
               height: 54,
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _handleLogin,
@@ -311,6 +358,7 @@ class _LoginScreenState extends State<LoginScreen>
                         ),
                       ),
               ),
+            ),
             ),
           ],
         ),
