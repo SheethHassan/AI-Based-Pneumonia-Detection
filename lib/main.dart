@@ -46,8 +46,7 @@ void main() async {
 
 final themeModeNotifier = ValueNotifier<ThemeMode>(ThemeMode.light);
 
-class PneumoScanApp extends StatelessWidget {
-  const PneumoScanApp({super.key});
+class PneumoScanApp extends StatelessWidget {const PneumoScanApp({super.key});
 
   @override
   Widget build(BuildContext context) {
