@@ -1,0 +1,8 @@
+{
+  "name": "DenseNet121",
+  "version": "1.0.0",
+  "inputSize": 224,
+  "classes": ["Normal", "Pneumonia"],
+  "format": "TensorFlow Lite",
+  "description": "Transfer learning + fine-tuned DenseNet121 for chest X-ray binary classification"
+}
